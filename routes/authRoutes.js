@@ -15,7 +15,7 @@ mongoose.connect(process.env.DATABASE).then(() => {
 });
 
 // användare modell
-const user = require("../models/user")
+const User = require("../models/User");
 
 // Lägg till ny användare
 router.post("/register", async (req, res) => {
@@ -29,6 +29,9 @@ router.post("/register", async (req, res) => {
         }
 
         // Korrekt, spara användare
+        const user = new User({username, password});
+        await user.save();
+
         res.status(201).json({message: "User created"});
     } catch (error){
         res.status(500).json({error: "server error"});
@@ -47,11 +50,18 @@ router.post("/login", async (req, res) => {
         }
         
         // kolla creadentials
-        if (username === "Melvin" && password === "Bubben") {
-            res.status(200).json({message: "Login succesful"});
+        // finns användaren?
+        const user = await User.findOne( {username });
+        if(!user) {
+            return res.status(401).json({ error: "Incorrect username/password"});
         }
-        else {
-            res.status(401).json({error: "Invalid username or password"});
+
+        // kolla lösenordet
+        const isPasswordMatch = await user.comparePassword(password);
+        if(!isPasswordMatch) {
+            return res.status(401).json({error: "Incorrect password/username"});
+        } else {
+            res.status(200).json({message: "User logged in"});
         }
     }
     catch (error) {
