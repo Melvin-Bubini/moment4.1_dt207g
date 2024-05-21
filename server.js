@@ -3,7 +3,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const authRoutes = require("./routes/authRoutes");
 const jwt = require("jsonwebtoken");
-const cors = require("cors"); 
+const cors = require("cors");
 require("dotenv").config();
 
 const app = express();
@@ -17,22 +17,32 @@ app.use("/api", authRoutes);
 
 // skyddad route
 app.get("/api/secret", authenticateToken, (req, res) => {
-    res.json({ message: "Skyddad route!"});
+    const username = req.username; // Användarnamn från JWT-token
+    res.json({ message: `Hej och välkommen ${username}. Detta är en skyddad route!` });
+});
+
+// Validera token route
+app.post("/api/validateToken", authenticateToken, (req, res) => {
+    res.status(200).json({ message: "Token is valid" });
 });
 
 // validera token
-function authenticateToken (req, res, next) {
-   const authHeader = req.headers['authorization']
-   const token = authHeader && authHeader.split(' ')[1]; // token
+function authenticateToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // token
 
-   if (token == null) res.status(401).json({ message: "Not authorized for this route. Token is missing"});
+    if (token == null) {
+        return res.status(401).json({ message: "Not authorized for this route. Token is missing" });
+    }
 
-   jwt.verify(token, process.env.JWT_SECRET_KEY, (err, username) => {
-    if(err) return res.status(403).json({ message: "Not valid JWT"});
+    jwt.verify(token, process.env.JWT_SECRET_KEY, (err, decoded) => {
+        if (err) {
+            return res.status(403).json({ message: "Not valid JWT" });
+        }
 
-    req.username = username;
-    next();
-   });
+        req.username = decoded.username;
+        next();
+    });
 }
 
 // Starta applikationen
